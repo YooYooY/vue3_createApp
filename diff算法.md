@@ -81,9 +81,9 @@ const isSameVnodeType = (n1, n2) => {
 ```js
 return ()=>{
     if(state.flag){
-        h("div",{style:{color:"#f00"}},"hello")
+        return h("div",{style:{color:"#f00"}},"hello")
     }else{
-        h("div",{style:{background:"#0f0"}},"world")
+        return h("div",{style:{background:"#0f0"}},"world")
     }
 }
 ```
@@ -119,4 +119,71 @@ const patchProps = (oldProps, newProps, el) => {
   }
 }
 ```
+
+
+### 子节点对比
+
+子节点对比条件
+
+- 旧的是文本，新的是文本
+- 旧的是数组，新的是文本
+- 旧的是文本，新的是数组
+- 新的是数组，旧的是数组
+
+
+```ts
+return ()=>{
+  if(state.flag){
+    return h("div",{style:{color:"#f00"}},"hello")
+  }else{
+    return h("div",{style:{background:"#0f0"}},[
+      h("div",{},"chen"),
+      h("div",{},"wei"),
+      h("div",{},"long"),
+    ])
+  }
+}
+```
+
+交给 `patchChildren` 处理
+```ts
+const patchElement = (n1, n2, container) => {
+  // 比较两个虚拟节点，并且复用老节点
+  let el = n2.el = n1.el;
+  const oldProps = n1.props || {};
+  const newProps = n2.props || {};
+  
+  patchProps(oldProps,newProps,el);
+  
+  patchChildren(n1, n2, el);
+}
+
+const patchChildren = (n1,n2,el)=>{
+  
+  const c1 = n1.children
+  const c2 = n2.children
+
+  const prevShapeFlag = n1.shapeFlag
+  const nextShapeFlag = n2.shapeFlag
+
+  // 旧的是文本，新的是文本
+  if(nextShapeFlag & ShapeFlags.TEXT_CHILDREN){
+    // 新的是文本
+    if(c2 !== c1){
+      hostSetElementText(el,c2);
+    }
+  } else {
+    // 新的是数组 旧的是数组
+    if(prevShapeFlag & ShapeFlags.ARRAY_CHILDREN){
+      patchKeyedChildren(c1,c2,el)
+    }else{
+      // 老的是文本 新的是数组
+      hostSetElementText(el,""); // 删掉旧内容
+      mountChildren(c2,el)
+    }
+  }
+}
+```
+
+
 

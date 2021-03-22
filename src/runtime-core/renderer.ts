@@ -57,6 +57,36 @@ export function createRenderer(options) {
       }
     }
   }
+  
+  const patchKeyedChildren = (c1,c2,el)=>{}
+  
+  const patchChildren = (n1,n2,el)=>{
+    console.log(n1,n2);
+    
+    const c1 = n1.children
+    const c2 = n2.children
+
+    const prevShapeFlag = n1.shapeFlag
+    const nextShapeFlag = n2.shapeFlag
+
+    // 旧的是文本，新的是文本
+    if(nextShapeFlag & ShapeFlags.TEXT_CHILDREN){
+      // 新的是文本
+      if(c2 !== c1){
+        hostSetElementText(el,c2);
+      }
+    } else {
+      // 新的是数组 旧的是数组
+      if(prevShapeFlag & ShapeFlags.ARRAY_CHILDREN){
+        patchKeyedChildren(c1,c2,el)
+      }else{
+        // 老的是文本 新的是数组
+        hostSetElementText(el,""); // 删掉旧内容
+        mountChildren(c2,el)
+      }
+    }
+    
+  }
 
   const patchElement = (n1, n2, container) => {
     // 比较两个虚拟节点，并且复用老节点
@@ -65,6 +95,8 @@ export function createRenderer(options) {
     const newProps = n2.props || {};
     
     patchProps(oldProps,newProps,el);
+    
+    patchChildren(n1, n2, el);
   }
 
   const mountComponent = (vnode, container) => {

@@ -21,9 +21,13 @@
           }, 1000);
           return ()=>{
             if(state.flag){
-              h("div",{style:{color:"#f00"}},"hello")
+              return h("div",{style:{color:"#f00"}},"hello")
             }else{
-              h("div",{style:{background:"#0f0"}},"world")
+              return h("div",{style:{background:"#0f0"}},[
+                h("div",{},"chen"),
+                h("div",{},"wei"),
+                h("div",{},"long"),
+              ])
             }
           }
         },
