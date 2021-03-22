@@ -1,8 +1,6 @@
 # Vue3 渲染原理
 
-[createApp](./createApp.png)
-
-[flow](./flow.png)
+![flow](./flow.png)
 
 ## Vue3中组件和节点渲染
 
