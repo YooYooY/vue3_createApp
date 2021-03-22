@@ -15,18 +15,17 @@
 
       const App = {
         setup() {
-          let state = reactive({name:"chenwl"})
+          let state = reactive({flag: true})
           setTimeout(() => {
-            state.name = "change";
+            state.flag = !state.flag;
           }, 1000);
           return ()=>{
-            return h("ul",{style:{color:"blue"}}, state.name)
+            return state.flag ? h("div",{style:{color:"#f00"}},"hello") : h("p",{style:{background:"#0f0"}},"world")
             
           }
         },
       }
 
-      
       let app = createApp(App);
       app.mount("#app")
     </script>

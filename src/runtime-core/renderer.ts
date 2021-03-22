@@ -4,17 +4,16 @@ import { createAppApi } from './apiCreateApp'
 import { createComponentInstance, setupComponent } from './component'
 
 export function createRenderer(options) {
+  const {
+    createElement: hostCreateElement,
+    insert: hostInsert,
+    remove: hostRemove,
+    setElementText: hostSetElementText,
+    createTextNode: hostCreateNode,
+    patchProp: hostPatchProp,
+  } = options
 
   const mountElement = (vnode, container) => {
-    const {
-      createElement: hostCreateElement,
-      insert: hostInsert,
-      remove: hostRemove,
-      setElementText: hostSetElementText,
-      createTextNode: hostCreateNode,
-      patchProp: hostPatchProp,
-    } = options
-
     let { shapeFlag, props, children, type } = vnode
 
     // 将真实节点和虚拟节点关联起来
@@ -74,12 +73,27 @@ export function createRenderer(options) {
     }
   }
 
+  const isSameVnodeType = (n1, n2) => {
+    return n1.type == n2.type && n1.key == n2.key
+  }
+
   /*
    * @params n1 上一次渲染vnode
    * @params n2 本次渲染vnode
    * @params container 容器dom
    */
   const patch = (n1, n2, container) => {
+    // 同级对比
+    // 类型不一样 key 不一样不复用
+    // 复用节点后 比较属性
+    // 对比孩子 1方 有儿子 2方都有儿子
+    // 都有儿子的时候此时正真的dom-diff
+    
+    if (n1 && !isSameVnodeType(n1, n2)) {      
+      hostRemove(n1.el)
+      n1 = null
+    }
+
     // 开始渲染
     let { shapeFlag } = n2
     if (shapeFlag & ShapeFlags.ELEMENT) {
@@ -98,11 +112,14 @@ export function createRenderer(options) {
   function setupRenderEffect(instance, container) {
     effect(() => {
       if (!instance.isMounted) {
-        let subTree = (instance.subTree = instance.render())
+        let subTree = instance.subTree = instance.render();
         patch(null, subTree, container)
         instance.isMounted = true
       } else {
-        console.log('update')
+        console.log('update', instance)
+        let prevTree = instance.subTree
+        let nextTree = instance.render()
+        patch(prevTree, nextTree, container)
       }
     })
   }
