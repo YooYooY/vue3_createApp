@@ -185,5 +185,151 @@ const patchChildren = (n1,n2,el)=>{
 }
 ```
 
+### 数组子节点的对比
+
+#### 尽可能复用 children 节点
+
+新旧值前面节点相同：
+
+- 旧 `[a, b, c]`
+- 新 `[a, b, c, d]`
+
+```ts
+let i=0;
+let e1 = c1.length-1;
+let e2 = c2.length-1;
+while(i<=e1 && i<=e2){// 谁先比对完毕就结束
+  const n1 = c1[i];
+  const n2 = c2[i];
+  if(isSameVnodeType(n1,n2)){
+    patch(n1,n2,el); // 递归比较子节点
+  }else{
+    break;
+  }
+  i++;
+}
+```
+
+新旧值后面面节点相同：
+
+- 旧 `[a, b, c]`
+- 新 `[d, a, b, c]`
+
+```ts
+while(i<= e1 && i<=e2){
+  const n1 = c1[e1];
+  const n2 = c2[e2];
+  if(isSameVnodeType(n1,n2)){
+    patch(n1,n2,el)
+  }else{
+    break;
+  }
+  e1--;
+  e2--;
+}
+```
+
+#### 前后都不一样的情况，插入和删除操作
+
+```ts
+// 新增的节点，在i和e2之间或i=e2
+if(i>e1){
+  
+  if(i<=e2){
+    // 获取插入参照物
+    // 前面值都一样，e2值不变：e2+1 大于 数组长度（c2.length）
+    // 后面值都一样，e2向前取：e2+1 小于 数组长度（c2.length）
+    const nextPos = e2+1;
+    const anchor = nextPos < c2.length ? c2[nextPos].el : null;
+    console.log(i, e1, e2, anchor)
+    while(i<=e2){
+      patch(null, c2[i], el, anchor);
+      i++
+    }
+  }
+  
+  // 新值小于旧值 删除情况， 判断条件：i>e2
+  // abcd abc (i=3 e1=3 e2=2)
+} else if(i>e2){
+    while(i<=e1){
+      hostRemove(c1[i].el);
+      i++;
+    }
+}
+```
+
+`patchKeyedChildren` 方法如下：
+
+```ts
+const patchKeyedChildren = (c1,c2,el)=>{
+  // 新旧都有children元素
+  
+  // 1) 尽可能复用两个 children
+  // abc
+  // abcd 
+  // i = 3
+  let i=0;
+  let e1 = c1.length-1;
+  let e2 = c2.length-1;
+  while(i<=e1 && i<=e2){// 谁先比对完毕就结束
+    const n1 = c1[i];
+    const n2 = c2[i];
+    if(isSameVnodeType(n1,n2)){
+      patch(n1,n2,el); // 递归比较子节点
+    }else{
+      break;
+    }
+    i++;
+  }
+  
+  // 2) abc i=0 e1=2 e2=3
+  //    dabc  i=0 e1=-1 e2=0
+  
+  while(i<= e1 && i<=e2){
+    const n1 = c1[e1];
+    const n2 = c2[e2];
+    if(isSameVnodeType(n1,n2)){
+      patch(n1,n2,el)
+    }else{
+      break;
+    }
+    e1--;
+    e2--;
+  }
+  
+  // 3) 前后都不一样的情况
+  
+  // 新值大于旧值 新增情况，判断条件：i大于e1
+  // abc => abcd (i=3 e1=2 e2=3)
+  // abc => dabc (i=0 e1=-1 e2=0)
+  if(i>e1){
+    // 新增的节点，在i和e2之间或i=e2
+    if(i<=e2){
+      // 获取插入参照物
+      // 前面值都一样，e2值不变：e2+1 大于 数组长度（c2.length）
+      // 后面值都一样，e2向前取：e2+1 小于 数组长度（c2.length）
+      
+      const nextPos = e2+1;
+      const anchor = nextPos < c2.length ? c2[nextPos].el : null;
+      console.log(i, e1, e2, anchor)
+      while(i<=e2){
+        patch(null, c2[i], el, anchor);
+        i++
+      }
+    }
+    
+    // 新值小于旧值 删除情况， 判断条件：i>e2
+    // abcd abc (i=3 e1=3 e2=2)
+  } else if(i>e2){
+      while(i<=e1){
+        hostRemove(c1[i].el);
+        i++;
+      }
+  }else{
+    // 乱序比对
+  }     
+}
+```
+
 
 

@@ -13,7 +13,7 @@ export function createRenderer(options) {
     patchProp: hostPatchProp,
   } = options
 
-  const mountElement = (vnode, container) => {
+  const mountElement = (vnode, container, anchor) => {
     let { shapeFlag, props, children, type } = vnode
 
     // 将真实节点和虚拟节点关联起来
@@ -31,7 +31,7 @@ export function createRenderer(options) {
       }
     }
 
-    hostInsert(el, container)
+    hostInsert(el, container, anchor)
   }
 
   const mountChildren = (children, container) => {
@@ -58,10 +58,78 @@ export function createRenderer(options) {
     }
   }
   
-  const patchKeyedChildren = (c1,c2,el)=>{}
+  const patchKeyedChildren = (c1,c2,el)=>{
+    // 新旧都有children元素
+    
+    // 1) 尽可能复用两个 children
+    // abc
+    // abcd 
+    // i = 3
+    let i=0;
+    let e1 = c1.length-1;
+    let e2 = c2.length-1;
+    while(i<=e1 && i<=e2){// 谁先比对完毕就结束
+      const n1 = c1[i];
+      const n2 = c2[i];
+      if(isSameVnodeType(n1,n2)){
+        patch(n1,n2,el); // 递归比较子节点
+      }else{
+        break;
+      }
+      i++;
+    }
+    
+    // 2) abc i=0 e1=2 e2=3
+    //  dabc  i=0 e1=-1 e2=0
+    
+    while(i<= e1 && i<=e2){
+      const n1 = c1[e1];
+      const n2 = c2[e2];
+      if(isSameVnodeType(n1,n2)){
+        patch(n1,n2,el)
+      }else{
+        break;
+      }
+      e1--;
+      e2--;
+    }
+    
+    // 3) 前后都不一样的情况
+    
+    // 新值大于旧值 新增情况，判断条件：i大于e1
+    // abc => abcd (i=3 e1=2 e2=3)
+    // abc => dabc (i=0 e1=-1 e2=0)
+    if(i>e1){
+      // 新增的节点，在i和e2之间或i=e2
+      if(i<=e2){
+        // 获取插入参照物
+        // 前面值都一样，e2值不变：e2+1 大于 数组长度（c2.length）
+        // 后面值都一样，e2向前取：e2+1 小于 数组长度（c2.length）
+        
+        const nextPos = e2+1;
+        const anchor = nextPos < c2.length ? c2[nextPos].el : null;
+        console.log(i, e1, e2, anchor)
+        while(i<=e2){
+          patch(null, c2[i], el, anchor);
+          i++
+        }
+      }
+      
+      // 新值小于旧值 删除情况， 判断条件：i>e2
+      // abcd abc (i=3 e1=3 e2=2)
+    } else if(i>e2){
+        while(i<=e1){
+          hostRemove(c1[i].el);
+          i++;
+        }
+        console.log(i, e1, e2)
+    }else{
+      // 乱序比对
+    }
+        
+  }
   
   const patchChildren = (n1,n2,el)=>{
-    console.log(n1,n2);
     
     const c1 = n1.children
     const c2 = n2.children
@@ -112,10 +180,10 @@ export function createRenderer(options) {
 
   const updateComponent = (n1, n2, container) => {}
 
-  const processElement = (n1, n2, container) => {
+  const processElement = (n1, n2, container, anchor) => {
     if (n1 == null) {
       // 元素挂载
-      mountElement(n2, container)
+      mountElement(n2, container, anchor)
     } else {
       patchElement(n1, n2, container)
     }
@@ -139,7 +207,7 @@ export function createRenderer(options) {
    * @params n2 本次渲染vnode
    * @params container 容器dom
    */
-  const patch = (n1, n2, container) => {
+  const patch = (n1, n2, container, anchor = null) => {
     // 同级对比
     // 类型不一样 key 不一样不复用
     // 复用节点后 比较属性
@@ -155,7 +223,7 @@ export function createRenderer(options) {
     let { shapeFlag } = n2
     if (shapeFlag & ShapeFlags.ELEMENT) {
       // 1
-      processElement(n1, n2, container)
+      processElement(n1, n2, container, anchor)
     } else if (shapeFlag & ShapeFlags.STATEFUL_COMPONENT) {
       processComponent(n1, n2, container)
     }

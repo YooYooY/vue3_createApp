@@ -21,12 +21,17 @@
           }, 1000);
           return ()=>{
             if(state.flag){
-              return h("div",{style:{color:"#f00"}},"hello")
+              return h("div",{style:{color:"#f00"}},[
+                h("div",{key:"A"},"A"),
+                h("div",{key:"B"},"B"),
+                h("div",{key:"C"},"C"),
+                h("div",{key:"E"},"E"),
+              ])
             }else{
               return h("div",{style:{background:"#0f0"}},[
-                h("div",{},"chen"),
-                h("div",{},"wei"),
-                h("div",{},"long"),
+                h("div",{key:"A"},"A"),
+                h("div",{key:"B"},"B"),
+                h("div",{key:"C"},"C"),
               ])
             }
           }
