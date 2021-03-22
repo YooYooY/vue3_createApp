@@ -44,7 +44,7 @@ app.mount("#app")
 - 对比孩子 1方 有儿子 2方都有儿子
 - 都有儿子的时候此时正真的dom-diff
 
-## 类型和key都不一样
+### 类型和key都不一样
 
 ```ts
 const isSameVnodeType = (n1, n2) => {
@@ -73,3 +73,50 @@ const isSameVnodeType = (n1, n2) => {
     }
   }
 ```
+
+### 属性对比
+
+复用节点后 比较属性
+
+```js
+return ()=>{
+    if(state.flag){
+        h("div",{style:{color:"#f00"}},"hello")
+    }else{
+        h("div",{style:{background:"#0f0"}},"world")
+    }
+}
+```
+
+```ts
+const patchElement = (n1, n2, container) => {
+    // 比较两个虚拟节点，并且复用老节点
+    let el = n2.el = n1.el;
+
+    // 对比属性
+    const oldProps = n1.props || {};
+    const newProps = n2.props || {};
+    patchProps(oldProps,newProps,el);
+}
+```
+
+```ts
+const patchProps = (oldProps, newProps, el) => {
+  if (oldProps !== newProps) {
+    for (let key in newProps) {
+      const prev = oldProps[key]
+      const next = newProps[key]
+      if (prev !== next) {
+        hostPatchProp(el, key, prev, next)
+      }
+    }
+    // 旧属性新的props中没有，需要移除
+    for (let key in oldProps) {
+      if (!(key in newProps)) {
+        hostPatchProp(el, key, oldProps[key], null)
+      }
+    }
+  }
+}
+```
+

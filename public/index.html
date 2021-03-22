@@ -20,8 +20,11 @@
             state.flag = !state.flag;
           }, 1000);
           return ()=>{
-            return state.flag ? h("div",{style:{color:"#f00"}},"hello") : h("p",{style:{background:"#0f0"}},"world")
-            
+            if(state.flag){
+              h("div",{style:{color:"#f00"}},"hello")
+            }else{
+              h("div",{style:{background:"#0f0"}},"world")
+            }
           }
         },
       }

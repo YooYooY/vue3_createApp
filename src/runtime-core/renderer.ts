@@ -39,8 +39,33 @@ export function createRenderer(options) {
       patch(null, children[i], container)
     }
   }
+  
+  const patchProps = (oldProps, newProps, el)=>{
+    if(oldProps !== newProps){
+      for(let key in newProps){
+        const prev = oldProps[key];
+        const next = newProps[key];
+        if(prev !== next){
+          hostPatchProp(el,key,prev,next);
+        }
+      }
+      // 旧属性新的props中没有，需要移除
+      for(let key in oldProps){
+        if(!(key in newProps)){
+          hostPatchProp(el,key,oldProps[key],null)
+        }
+      }
+    }
+  }
 
-  const patchElement = (n1, n2, container) => {}
+  const patchElement = (n1, n2, container) => {
+    // 比较两个虚拟节点，并且复用老节点
+    let el = n2.el = n1.el;
+    const oldProps = n1.props || {};
+    const newProps = n2.props || {};
+    
+    patchProps(oldProps,newProps,el);
+  }
 
   const mountComponent = (vnode, container) => {
     // 根据虚拟dom创建实例
@@ -116,7 +141,7 @@ export function createRenderer(options) {
         patch(null, subTree, container)
         instance.isMounted = true
       } else {
-        console.log('update', instance)
+        console.log('update')
         let prevTree = instance.subTree
         let nextTree = instance.render()
         patch(prevTree, nextTree, container)
