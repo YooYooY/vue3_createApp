@@ -200,7 +200,19 @@ export const enum ShapeFlags {
     TEXT_CHILDREN = 1 << 3, // 文本孩子
     ARRAY_CHILDREN = 1 << 4 // 数组孩子
 }
+
+// ELEMENT 0000000001
+// FUNCTIONAL_COMPONENT 0000000010
+// STATEFUL_COMPONENT 0000000100
+// TEXT_CHILDREN 0000001000
+// ARRAY_CHILDREN 0000010000
 ```
+
+> shapeFlags 目的是通过二进制按位运算，方便判断当前vnode类型
+
+按位运算：
+- a & b：对于每一个比特位，只有两个操作数相应的比特位都是1时，结果为1，否则为0。
+- a | b：对于每一个比特位，当两个操作数相应的比特位至少有一个1时，结果为1，否则为0。
 
 `vnode.ts`如下：
 ```ts
