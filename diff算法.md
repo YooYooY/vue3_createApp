@@ -332,4 +332,159 @@ const patchKeyedChildren = (c1,c2,el)=>{
 ```
 
 
+#### 乱序比对
 
+前后子节点值变化：
+
+旧： a,b,c,d,e,f,g
+新： a,b,e,d,c,h,f,g
+
+```ts
+const App = {
+  setup() {
+    let state = reactive({ flag: true })
+    setTimeout(() => {
+      state.flag = !state.flag
+    }, 1000)
+    return () => {
+      if (state.flag) {
+        return h('div', {}, [
+          h('div', { key: 'A' }, 'A'),
+          h('div', { key: 'B' }, 'B'),
+
+          h('div', { key: 'C' }, 'C'),
+          h('div', { key: 'D' }, 'D'),
+          h('div', { key: 'E' }, 'E'),
+
+          h('div', { key: 'F' }, 'F'),
+          h('div', { key: 'G' }, 'G'),
+        ])
+      } else {
+        return h('div', {}, [
+          h('div', { key: 'A' }, 'A'),
+          h('div', { key: 'B' }, 'B'),
+
+          h('div', { key: 'E' }, 'E'),
+          h('div', { key: 'D' }, 'D'),
+          h('div', { key: 'C' }, 'C'),
+          h('div', { key: 'H' }, 'H'),
+
+          h('div', { key: 'F' }, 'F'),
+          h('div', { key: 'G' }, 'G'),
+        ])
+      }
+    }
+  },
+}
+```
+
+
+```ts
+// 乱序比对
+// ab [cde] fg   // s1=2 e1=4
+// ab [edch] fg   // s2=2 e2=5
+const s1 = i
+const s2 = i
+// 新的索引 和 key 做成一个映射表
+const keyToNewIndexMap = new Map()
+for (let i = s2; i <= e2; i++) {
+  const nextChild = c2[i]
+  if (nextChild.key != null) {
+    keyToNewIndexMap.set(nextChild.key, i)
+  }
+}
+
+const toBePatched = e2 - s2 + 1 // 需要处理的节点总数
+const newIndexToOldMapIndex = new Array(toBePatched).fill(0)
+
+// 遍历老节点
+for (i = s1; i <= e1; i++) {
+  const prevChild = c1[i]
+  let newIndex = keyToNewIndexMap.get(prevChild.key)
+  if (newIndex == undefined) {
+    // 旧值在新值中不存在，直接删除
+    hostRemove(prevChild.el)
+  } else {
+    newIndexToOldMapIndex[newIndex - s2] = i + 1
+    patch(prevChild, c2[newIndex], el)
+  }
+}
+
+let increasingIndexSequence = getSequence(newIndexToOldMapIndex)
+let j = increasingIndexSequence.length - 1;
+
+for (i = toBePatched - 1; i >= 0; i--) {
+  const nextIndex = s2 + i // [edch] 找到h索引
+  const nextChild = c2[nextIndex] // 找到h
+  // 找到当前元素的下一个元素
+  let anchor = nextIndex + 1 < c2.length ? c2[nextIndex + 1].el : null
+
+  if (newIndexToOldMapIndex[i] == 0) {
+    // 新元素，直接创建插入到当前元素的下一个
+    patch(null, nextChild, el, anchor)
+  } else {
+    // 根据参照物直接将节点移动过去，所有节点都需要移动
+    // 没有考虑不需要动的节点情况
+    // hostInsert(nextChild.el, el, anchor)
+
+    // 最长递增子序列优化
+    if (j < 0 || i != increasingIndexSequence[j]) {
+      hostInsert(nextChild.el, el, anchor)
+    } else {
+      j--;
+    }
+  }
+}
+```
+
+### 最长递增子序列优化
+
+```ts
+function getSequence(arr):number[] {
+  const result = [0]
+  const p = arr.slice()
+  let i, j, u, v, c
+  const len = arr.length
+  for (i = 0; i < len; i++) {
+    const arrI = arr[i]
+    if (arrI !== 0) {
+      j = result[result.length - 1]
+      // 拿最后一项的值 和 当前这项做比较
+      if (arr[j] < arrI) {
+        p[i] = j // 保存递增索引
+        result.push(i)
+        continue
+      }
+    }
+    u = 0
+    v = result.length - 1 // 二分查找 找索引
+    while (u < v) {
+      c = ((u + v) / 2) | 0
+      if (arr[result[c]] < arrI) {
+        u = c + 1
+      } else {
+        v = c
+      }
+    }
+    // 确定索引, 用小的替换从、
+    if (arrI < arr[result[u]]) {
+      if (u > 0) {
+        console.log(p, result[u - 1], result, u)
+        p[i] = result[u - 1]
+      }
+      result[u] = i
+    }
+  }
+
+  u = result.length
+  v = result[u - 1]
+  while (u-- > 0) {
+    result[u] = v
+    v = p[v]
+  }
+  return result
+}
+
+console.log(getSequence([1, 2, 6, 8, 12, 5, 7]))
+
+```
